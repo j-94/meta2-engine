@@ -18,6 +18,14 @@ users/
 *.log
 trace/
 TRACE.json
+trace.jsonl
+_episodes/
+_out/
+out/
+
+# Secrets
+POS_TOKEN.json
+*.env
 
 # Build artifacts
 *.exe

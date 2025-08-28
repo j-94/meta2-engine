@@ -1,0 +1,11 @@
+# Global owners
+* @j-94
+
+# Engine core requires review
+/engine/src/engine/ @j-94
+
+# Policy changes require review
+/engine/policies/ @j-94
+
+# CI/CD changes require review
+/.github/ @j-94
