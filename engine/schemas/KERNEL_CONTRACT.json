@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Meta² Kernel Contract",
+  "type": "object",
+  "required": ["bits", "gates", "meta2_rules"],
+  "properties": {
+    "bits": {
+      "type": "object",
+      "required": ["A", "U", "P", "E", "Δ", "I", "R", "T", "M"],
+      "properties": {
+        "A": {"type": "number", "minimum": 0, "maximum": 1, "description": "Action readiness"},
+        "U": {"type": "number", "minimum": 0, "maximum": 1, "description": "Uncertainty"},
+        "P": {"type": "number", "minimum": 0, "maximum": 1, "description": "Permission/safety"},
+        "E": {"type": "number", "minimum": 0, "maximum": 1, "description": "Error detected"},
+        "Δ": {"type": "number", "minimum": 0, "maximum": 1, "description": "Drift/staleness"},
+        "I": {"type": "number", "minimum": 0, "maximum": 1, "description": "Information need"},
+        "R": {"type": "number", "minimum": 0, "maximum": 1, "description": "Recovery mode"},
+        "T": {"type": "number", "minimum": 0, "maximum": 1, "description": "Trust/confidence"},
+        "M": {"type": "number", "minimum": 0, "maximum": 1, "description": "Meta-change proposed"}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "required": ["ask_act", "evidence", "meta2"],
+      "properties": {
+        "ask_act": {"type": "string", "enum": ["A>=1 && P>=1 && Δ==0"]},
+        "evidence": {"type": "string", "enum": ["U<τ || E==0"]},
+        "meta2": {"type": "string", "enum": ["shadow_rollout && ci_approved"]}
+      }
+    },
+    "meta2_rules": {
+      "type": "object",
+      "required": ["change_types", "approval_required", "rollback_conditions"],
+      "properties": {
+        "change_types": {"type": "array", "items": {"enum": ["confidence_gate", "backoff_strategy", "ask_act_threshold"]}},
+        "approval_required": {"type": "boolean", "const": true},
+        "rollback_conditions": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

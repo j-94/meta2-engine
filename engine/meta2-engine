@@ -47,7 +47,7 @@ RESPONSE=$(curl -s -X POST http://127.0.0.1:8080/run \
   -H 'content-type: application/json' \
   -d "{
     \"goal_id\": \"$GOAL\",
-    \"inputs\": {\"lm_model\": \"$LM\"},
+    \"inputs\": {\"lm_model\": \"$LM\", \"message\": \"$GOAL\"},
     \"policy\": $(cat "$POLICY_FILE")
   }")
 

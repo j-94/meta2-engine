@@ -1,0 +1,38 @@
+name: Policy Lint
+
+on:
+  pull_request:
+    paths:
+      - 'engine/src/engine/kernel.rs'
+      - 'engine/policies/**'
+      - 'engine/schemas/**'
+
+jobs:
+  validate-invariants:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    
+    - name: Validate TRACE schema
+      run: |
+        cd engine
+        python3 -c "import json; s=json.load(open('schemas/TRACE.schema.json')); assert 'bits' in s['properties']; assert len(s['properties']['bits']['required']) == 9"
+        
+    - name: Check Ask-Act gate invariant
+      run: |
+        cd engine
+        grep -q "ask_act_gate.*A.*P.*Δ" src/engine/kernel.rs || (echo "Ask-Act gate invariant missing" && exit 1)
+        
+    - name: Validate META2 changes
+      if: contains(github.event.pull_request.title, 'META2:')
+      run: |
+        test -f META2_PRIMER.md || (echo "META2 changes require META2_PRIMER.md" && exit 1)
+        grep -q "shadow_rollout_pct" META2_PRIMER.md || (echo "Shadow rollout % required" && exit 1)
+        
+    - name: Test bits emission
+      run: |
+        cd engine
+        cargo test
+        # Verify all 9 bits are emitted
+        grep -r "ExtendedBits" src/ | grep -q "a.*u.*p.*e.*d.*i.*r.*t.*m" || echo "Warning: verify all 9 bits emitted"

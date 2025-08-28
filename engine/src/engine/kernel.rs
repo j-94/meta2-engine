@@ -56,6 +56,27 @@ impl KernelLoop {
         }
     }
     
+    pub fn enforce_ask_act_gate(&self, bits: &ExtendedBits) -> Result<(), String> {
+        // STRUCTURAL INVARIANT: A>=1 && P>=1 && Δ==0
+        if !(bits.a >= 1.0 && bits.p >= 1.0 && bits.d == 0.0) {
+            return Err(format!("Ask-Act gate failed: A={:.1}, P={:.1}, Δ={:.1}", bits.a, bits.p, bits.d));
+        }
+        Ok(())
+    }
+    
+    pub fn validate_bits_complete(&self, bits: &ExtendedBits) -> Result<(), String> {
+        // STRUCTURAL INVARIANT: All 9 bits must be present
+        let bit_names = ["A", "U", "P", "E", "Δ", "I", "R", "T", "M"];
+        let bit_values = [bits.a, bits.u, bits.p, bits.e, bits.d, bits.i, bits.r, bits.t, bits.m];
+        
+        for (name, value) in bit_names.iter().zip(bit_values.iter()) {
+            if value.is_nan() || *value < 0.0 || *value > 1.0 {
+                return Err(format!("Invalid bit {}: {:.3}", name, value));
+            }
+        }
+        Ok(())
+    }
+    
     pub fn ask_act_gate(&self, bits: &ExtendedBits) -> bool {
         bits.a >= 1.0 && bits.p >= 1.0 && bits.d == 0.0
     }
@@ -77,6 +98,17 @@ impl KernelLoop {
         } else {
             false
         }
+    }
+    
+    pub fn get_self_snapshot(&self, trace_history: &[ExtendedBits]) -> String {
+        let recent: Vec<_> = trace_history.iter().rev().take(5).collect();
+        let effectiveness = if recent.is_empty() { 0.5 } else {
+            recent.iter().filter(|b| b.a >= 1.0 && b.p >= 1.0).count() as f32 / recent.len() as f32
+        };
+        let trust_trend = if recent.len() >= 3 { recent[0].t - recent[2].t } else { 0.0 };
+        
+        format!("effectiveness={:.2}, trust_trend={:.2}, recent_drift={}", 
+                effectiveness, trust_trend, recent.iter().any(|b| b.d > 0.0))
     }
     
     pub fn propose_meta2_change(&mut self, kpi_name: &str, current_value: f32) -> Option<Meta2Proposal> {

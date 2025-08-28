@@ -45,7 +45,8 @@ while true; do
         thread: $thread,
         system: $sys,
         message: $msg,
-        history: $hist
+        history: $hist,
+        lm_model: "gpt-4"
       },
       policy: null
     }')"

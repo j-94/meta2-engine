@@ -1,0 +1,30 @@
+{
+  "$id": "TRACE.schema.json",
+  "type": "object",
+  "required": ["ts", "layer", "obs", "act", "out", "bits", "cost", "eta", "lane"],
+  "properties": {
+    "ts": {"type": "string", "format": "date-time"},
+    "layer": {"enum": ["L1", "L2", "L3"]},
+    "obs": {"type": "object"},
+    "act": {"type": "object"},
+    "out": {"type": "object"},
+    "bits": {
+      "type": "object",
+      "required": ["A", "U", "P", "E", "Δ", "I", "R", "T", "M"],
+      "properties": {
+        "A": {"type": "integer", "minimum": 0, "maximum": 1},
+        "U": {"type": "integer", "minimum": 0, "maximum": 1},
+        "P": {"type": "integer", "minimum": 0, "maximum": 1},
+        "E": {"type": "integer", "minimum": 0, "maximum": 1},
+        "Δ": {"type": "integer", "minimum": 0, "maximum": 1},
+        "I": {"type": "integer", "minimum": 0, "maximum": 1},
+        "R": {"type": "integer", "minimum": 0, "maximum": 1},
+        "T": {"type": "integer", "minimum": 0, "maximum": 1},
+        "M": {"type": "integer", "minimum": 0, "maximum": 1}
+      }
+    },
+    "cost": {"type": "number"},
+    "eta": {"type": "number"},
+    "lane": {"type": "string"}
+  }
+}

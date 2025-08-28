@@ -8,11 +8,13 @@ pub mod kernel;
 pub mod meta_prompt;
 
 use types::{Manifest, Policy};
+use bits::Bits;
 use kernel::{ExtendedBits, KernelLoop, Meta2Proposal};
 use uuid::Uuid;
 
 static mut KERNEL: Option<KernelLoop> = None;
 static mut KPI_HISTORY: Vec<f32> = Vec::new();
+static mut TRACE_HISTORY: Vec<ExtendedBits> = Vec::new();
 
 pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> anyhow::Result<(Manifest, ExtendedBits, Option<Meta2Proposal>)> {
     let kernel = unsafe { KERNEL.get_or_insert_with(KernelLoop::new) };
@@ -45,7 +47,10 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
         let empty_history = vec![];
         let history = inputs.get("history").and_then(|v| v.as_array()).unwrap_or(&empty_history);
         
-        meta_prompt::process_meta_prompt(system, user_message, history)
+        // Get self-observation snapshot
+        let self_obs = kernel.get_self_snapshot(unsafe { &TRACE_HISTORY });
+        
+        meta_prompt::process_meta_prompt(system, user_message, history, Some(&self_obs))
     } else {
         inputs.get("message").and_then(|v| v.as_str()).unwrap_or("hello from one-engine").to_string()
     };
@@ -86,6 +91,34 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
     } else {
         None
     };
+    
+    // STRUCTURAL VALIDATION: Enforce kernel contract
+    if let Err(e) = kernel.validate_bits_complete(&bits) {
+        return Err(anyhow::anyhow!("Kernel contract violation: {}", e));
+    }
+    
+    // STRUCTURAL GATE: Ask-Act enforcement
+    if goal_id.contains("action") || goal_id.contains("execute") {
+        if let Err(e) = kernel.enforce_ask_act_gate(&bits) {
+            tracing::warn!("Ask-Act gate blocked action: {}", e);
+            // Return clarification request instead of proceeding
+            let clarification = format!("Ask-Act gate: {}. Need P=1, A=1, Δ=0", e);
+            let blocked_manifest = Manifest {
+                run_id: uuid::Uuid::new_v4().to_string(),
+                goal_id: goal_id.to_string(),
+                deliverables: vec!["clarification_required".to_string()],
+                evidence: serde_json::json!({"stdout": clarification, "stderr": "", "files": []}),
+                bits: Bits { a: bits.a, u: bits.u, p: bits.p, e: bits.e, d: bits.d, i: bits.i, r: bits.r, t: bits.t },
+            };
+            return Ok((blocked_manifest, bits, None));
+        }
+    }
+    
+    // Store trace for self-observation
+    unsafe { 
+        TRACE_HISTORY.push(bits.clone());
+        if TRACE_HISTORY.len() > 100 { TRACE_HISTORY.remove(0); }
+    }
     
     let manifest = Manifest {
         run_id: format!("r-{}", Uuid::new_v4()),
