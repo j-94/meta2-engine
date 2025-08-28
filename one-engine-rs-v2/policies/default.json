@@ -1,0 +1,6 @@
+{
+  "gamma_gate": 0.5,
+  "time_ms": 30000,
+  "max_risk": 0.3,
+  "tiny_diff_loc": 120
+}

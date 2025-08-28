@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# User Admin CLI for Meta² Engine
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+  "create")
+    USER_ID="$1"
+    QUOTA="${2:-1000}"
+    API_KEY="$(openssl rand -hex 16)"
+    
+    echo "Creating user: $USER_ID"
+    echo "API Key: $API_KEY"
+    echo "Quota: $QUOTA"
+    
+    # In production: store in database
+    echo "{\"user_id\":\"$USER_ID\",\"api_key\":\"$API_KEY\",\"quota\":$QUOTA}" > "users/$USER_ID.json"
+    echo "✅ User created: users/$USER_ID.json"
+    ;;
+    
+  "status")
+    USER_ID="$1"
+    API_KEY="$2"
+    
+    curl -s -H "x-api-key: $API_KEY" \
+      "http://127.0.0.1:8080/users/$USER_ID/status" | jq
+    ;;
+    
+  "run")
+    USER_ID="$1"
+    API_KEY="$2"
+    GOAL="$3"
+    
+    curl -s -X POST \
+      -H "x-api-key: $API_KEY" \
+      -H "content-type: application/json" \
+      -d "{\"goal_id\":\"$GOAL\",\"inputs\":{},\"policy\":null}" \
+      "http://127.0.0.1:8080/users/$USER_ID/run" | jq
+    ;;
+    
+  "list")
+    echo "Users:"
+    ls -1 users/*.json 2>/dev/null | sed 's/users\///; s/\.json//' || echo "No users found"
+    ;;
+    
+  *)
+    echo "Usage: $0 {create|status|run|list} [args...]"
+    echo "  create <user_id> [quota]     - Create new user"
+    echo "  status <user_id> <api_key>   - Check user status"
+    echo "  run <user_id> <api_key> <goal> - Run goal for user"
+    echo "  list                         - List all users"
+    exit 1
+    ;;
+esac

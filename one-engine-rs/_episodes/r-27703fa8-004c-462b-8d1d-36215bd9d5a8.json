@@ -1,0 +1,21 @@
+{
+  "episode_id": "r-27703fa8-004c-462b-8d1d-36215bd9d5a8",
+  "goal": "demo.test",
+  "started_at": "2025-08-28T18:34:44.985611+00:00",
+  "bits": {
+    "a": 1.0,
+    "d": 0.0,
+    "e": 0.0,
+    "i": 0.0,
+    "p": 1.0,
+    "r": 0.0,
+    "t": 0.8999999761581421,
+    "u": 0.0
+  },
+  "steps": [
+    "demo.write-file"
+  ],
+  "deliverables": [
+    "out/hello.txt"
+  ]
+}

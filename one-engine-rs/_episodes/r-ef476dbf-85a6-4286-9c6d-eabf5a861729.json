@@ -1,0 +1,21 @@
+{
+  "episode_id": "r-ef476dbf-85a6-4286-9c6d-eabf5a861729",
+  "goal": "demo.write-file",
+  "started_at": "2025-08-28T18:52:58.795806+00:00",
+  "bits": {
+    "a": 1.0,
+    "d": 0.0,
+    "e": 0.0,
+    "i": 0.0,
+    "p": 1.0,
+    "r": 0.0,
+    "t": 0.8999999761581421,
+    "u": 0.0
+  },
+  "steps": [
+    "demo.write-file"
+  ],
+  "deliverables": [
+    "_out/demo.txt"
+  ]
+}

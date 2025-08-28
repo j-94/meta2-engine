@@ -1,0 +1,4 @@
+gamma_min: 0.5
+max_diff_size: 200
+act_if: "A==1 && P==1 && Δ==0"
+clarify_template: "PROMPT_TEMPLATES/triad.md"

@@ -1,0 +1,22 @@
+{
+  "episode_id": "r-6bd9a354-2638-4071-88a5-3d101732a738",
+  "goal": "swe.analyze",
+  "started_at": "2025-08-28T18:58:28.091718+00:00",
+  "bits": {
+    "a": 1.0,
+    "d": 0.0,
+    "e": 0.0,
+    "i": 0.0,
+    "p": 1.0,
+    "r": 0.0,
+    "t": 0.8999999761581421,
+    "u": 0.0
+  },
+  "steps": [
+    "echo 'Running SWE task...'",
+    "ls -la",
+    "pwd",
+    "echo 'SWE task completed'"
+  ],
+  "deliverables": []
+}

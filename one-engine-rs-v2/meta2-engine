@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Meta² Engine CLI - Direct interface to the metacognitive system
+GOAL="$1"
+shift
+
+# Parse flags
+LM="gpt-4"
+BITS="A,U,P,E,Δ,I,R,T,M"
+TRACE="trace/run-$(date +%s).jsonl"
+POLICY_FILE="policies/default.json"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --lm) LM="$2"; shift 2 ;;
+    --bits) BITS="$2"; shift 2 ;;
+    --trace) TRACE="$2"; shift 2 ;;
+    --policy) POLICY_FILE="$2"; shift 2 ;;
+    *) echo "Unknown flag: $1"; exit 1 ;;
+  esac
+done
+
+# Ensure trace directory exists
+mkdir -p "$(dirname "$TRACE")"
+
+# Default policy if not specified
+if [[ ! -f "$POLICY_FILE" ]]; then
+  cat > "$POLICY_FILE" <<EOF
+{
+  "gamma_gate": 0.5,
+  "time_ms": 30000,
+  "max_risk": 0.3,
+  "tiny_diff_loc": 120
+}
+EOF
+fi
+
+# Call the engine API
+echo "🧠 Meta² Engine: $GOAL"
+echo "📊 Bits: $BITS"
+echo "📝 Trace: $TRACE"
+echo "🤖 LM: $LM"
+echo
+
+RESPONSE=$(curl -s -X POST http://127.0.0.1:8080/run \
+  -H 'content-type: application/json' \
+  -d "{
+    \"goal_id\": \"$GOAL\",
+    \"inputs\": {\"lm_model\": \"$LM\"},
+    \"policy\": $(cat "$POLICY_FILE")
+  }")
+
+# Extract and display results
+echo "$RESPONSE" | jq -r '
+  "🎯 Goal: " + .manifest.goal_id,
+  "🆔 Run: " + .manifest.run_id,
+  "📊 Bits: A=" + (.bits.a|tostring) + " U=" + (.bits.u|tostring) + " P=" + (.bits.p|tostring) + " E=" + (.bits.e|tostring) + " Δ=" + (.bits.d|tostring) + " I=" + (.bits.i|tostring) + " R=" + (.bits.r|tostring) + " T=" + (.bits.t|tostring),
+  "🔄 PR: " + (.pr_created // "none"),
+  "🧠 Meta²: " + (.meta2_proposal // "none")
+'
+
+# Append to trace file
+echo "$RESPONSE" | jq -c '{
+  ts: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
+  goal: .manifest.goal_id,
+  run_id: .manifest.run_id,
+  bits: .bits,
+  pr_created: .pr_created,
+  meta2_proposal: .meta2_proposal,
+  evidence: .manifest.evidence
+}' >> "$TRACE"
+
+echo
+echo "✅ Trace appended to: $TRACE"
+
+# Check for meta² proposals
+if echo "$RESPONSE" | jq -e '.meta2_proposal' > /dev/null; then
+  echo "🚨 Meta² proposal detected - policy adaptation recommended"
+  echo "$RESPONSE" | jq -r '.meta2_proposal' | jq .
+fi

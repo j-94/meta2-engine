@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+USER="${1:-demo}"
+KEY="${2:-demo-key-123}"
+THREAD="${3:-omni-1}"
+API="http://127.0.0.1:8080/users/$USER/run"
+PROMPT_FILE="prompts/META_OMNI.md"
+STATE_DIR=".chat_state"
+mkdir -p "$STATE_DIR"
+HIST="$STATE_DIR/$THREAD.json"
+
+# Initialize history if not exists
+[[ -f "$HIST" ]] || echo "[]" > "$HIST"
+
+echo "🧠 Meta² Chat - User: $USER, Thread: $THREAD"
+echo "📝 Prompt: $PROMPT_FILE"
+echo "💾 History: $HIST"
+echo "Type 'exit' to quit, 'clear' to reset history"
+echo
+
+while true; do
+  printf "\nYou> "
+  IFS= read -r MSG || exit 0
+  
+  case "$MSG" in
+    "exit"|"quit") echo "👋 Goodbye!"; exit 0 ;;
+    "clear") echo "[]" > "$HIST"; echo "🗑️  History cleared"; continue ;;
+    "") continue ;;
+  esac
+  
+  # Read system prompt and history
+  SYS="$(cat "$PROMPT_FILE")"
+  HISTORY="$(cat "$HIST")"
+  
+  # Build request
+  REQ="$(jq -n \
+    --arg thread "$THREAD" \
+    --arg sys "$SYS" \
+    --arg msg "$MSG" \
+    --argjson hist "$HISTORY" \
+    '{
+      goal_id: "meta.omni",
+      inputs: {
+        thread: $thread,
+        system: $sys,
+        message: $msg,
+        history: $hist
+      },
+      policy: null
+    }')"
+  
+  # Call API
+  echo "🤖 Thinking..."
+  RES="$(curl -s -X POST \
+    -H "x-api-key: $KEY" \
+    -H "content-type: application/json" \
+    -d "$REQ" \
+    "$API")"
+  
+  # Check for errors
+  if echo "$RES" | jq -e '.error' >/dev/null 2>&1; then
+    echo "❌ Error: $(echo "$RES" | jq -r '.error // "Unknown error"')"
+    continue
+  fi
+  
+  # Extract and display agent response
+  echo
+  echo "🎯 Intent: $(echo "$RES" | jq -r '.manifest.evidence.stdout // "No response"')"
+  echo "📊 Bits: $(echo "$RES" | jq -r '.bits | to_entries | map("\(.key)=\(.value)") | join(" ")')"
+  echo "🔄 PR: $(echo "$RES" | jq -r '.pr_created // "none"')"
+  echo "🧠 Meta²: $(echo "$RES" | jq -r '.meta2_proposal // "none"')"
+  
+  # Show quota
+  QUOTA="$(echo "$RES" | jq -r '.quota_remaining // "unknown"')"
+  echo "💰 Quota: $QUOTA"
+  
+  # Update history
+  NEW_HIST="$(echo "$HISTORY" | jq \
+    --arg msg "$MSG" \
+    --argjson res "$RES" \
+    '. + [
+      {"role": "user", "content": $msg},
+      {"role": "assistant", "content": $res}
+    ]')"
+  echo "$NEW_HIST" > "$HIST"
+done

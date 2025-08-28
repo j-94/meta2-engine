@@ -1,0 +1,25 @@
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Chat state
+.chat_state/
+users/
+
+# Logs
+*.log
+trace/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib

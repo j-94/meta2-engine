@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "required": ["intent", "bits", "patch", "explanation"],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "required": ["goal", "constraints", "evidence"],
+      "properties": {
+        "goal": {"type": "string"},
+        "constraints": {"type": "array", "items": {"type": "string"}},
+        "evidence": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "bits": {
+      "type": "object",
+      "required": ["A", "U", "P", "E", "Δ", "I", "R", "T", "M"],
+      "properties": {
+        "A": {"type": "integer", "minimum": 0, "maximum": 1},
+        "U": {"type": "integer", "minimum": 0, "maximum": 1},
+        "P": {"type": "integer", "minimum": 0, "maximum": 1},
+        "E": {"type": "integer", "minimum": 0, "maximum": 1},
+        "Δ": {"type": "integer", "minimum": 0, "maximum": 1},
+        "I": {"type": "integer", "minimum": 0, "maximum": 1},
+        "R": {"type": "integer", "minimum": 0, "maximum": 1},
+        "T": {"type": "integer", "minimum": 0, "maximum": 1},
+        "M": {"type": "integer", "minimum": 0, "maximum": 1}
+      }
+    },
+    "patch": {
+      "type": "object",
+      "required": ["files", "post_checks"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "diff"],
+            "properties": {
+              "path": {"type": "string"},
+              "diff": {"type": "string"}
+            }
+          }
+        },
+        "post_checks": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "explanation": {
+      "type": "object",
+      "required": ["assumptions", "evidence", "limits"],
+      "properties": {
+        "assumptions": {"type": "array", "items": {"type": "string"}},
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "limits": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "questions": {"type": "array", "items": {"type": "string"}}
+  }
+}
