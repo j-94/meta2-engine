@@ -1,0 +1,39 @@
+name: Coder OIDC/AWS Setup
+description: Checklist to enable Coder deploy workflow via GitHub OIDC
+labels: [infra, coder, aws]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this issue to track enabling the Coder AWS deploy workflow.
+        When complete, reference this issue in the infra PR with `Closes #<issue>`.
+  - type: input
+    id: aws_region
+    attributes:
+      label: AWS Region
+      description: Region for deployment (e.g., eu-west-1)
+      placeholder: eu-west-1
+  - type: input
+    id: role_arn
+    attributes:
+      label: AWS OIDC Role ARN
+      description: ARN of the IAM role assumed by GitHub Actions
+      placeholder: arn:aws:iam::123456789012:role/gh-actions-coder-deploy
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: Steps
+      options:
+        - label: Create AWS IAM role with OIDC trust for this repo
+        - label: Add repo secret AWS_ROLE_ARN
+        - label: Add repo secret AWS_REGION
+        - label: Enable Pages (Build & deploy via GitHub Actions)
+        - label: Run Actions → Coder Deploy → apply
+        - label: Verify access to http://<public-ip>/
+        - label: Optional — tighten SSH security group and/or use SSM
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Add any relevant details, IPs, or follow-ups
+

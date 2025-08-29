@@ -8,6 +8,8 @@ This folder contains a minimal Terraform configuration and GitHub Action to prov
 - Region secret `AWS_REGION`
 - (optional) Provide `key_name` via TF var if you want SSH; otherwise use SSM or console
 
+Tracking: open a new Issue using the template “Coder OIDC/AWS Setup”. When finished, edit the infra PR description to include `Closes #<issue_number>` so it auto‑closes on merge.
+
 ## Run from GitHub
 - Go to Actions → "Coder Deploy" → Run workflow
   - action: apply (to create) or destroy
@@ -32,4 +34,3 @@ terraform apply -var region=eu-west-1 -var ssh_cidr=$(curl -s ifconfig.me)/32
 ## Next
 - Login to Coder: `http://<public-ip>/` and complete setup
 - (Optional) Seed templates with `coder` CLI after first admin configured
-
