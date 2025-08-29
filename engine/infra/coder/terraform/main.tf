@@ -42,8 +42,20 @@ resource "aws_instance" "coder" {
   vpc_security_group_ids = [aws_security_group.coder.id]
   key_name               = var.key_name != "" ? var.key_name : null
 
-  user_data = file("${path.module}/../scripts/coder_bootstrap.sh")
+  user_data = templatefile("${path.module}/../scripts/caddy_coder_bootstrap.sh", {
+    domain = var.domain_name,
+    email  = var.tls_email
+  })
 
   tags = merge({ Name = "coder-host" }, var.tags)
 }
 
+# Optional DNS if provided
+resource "aws_route53_record" "coder_a" {
+  count   = var.zone_id != "" && var.domain_name != "" ? 1 : 0
+  zone_id = var.zone_id
+  name    = var.domain_name
+  type    = "A"
+  ttl     = 60
+  records = [aws_instance.coder.public_ip]
+}
