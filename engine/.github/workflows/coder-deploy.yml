@@ -1,0 +1,58 @@
+name: Coder Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: apply or destroy
+        required: true
+        default: apply
+        type: choice
+        options: [apply, destroy]
+      region:
+        description: AWS region (overrides secret)
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - name: Terraform Init
+        working-directory: infra/coder/terraform
+        run: terraform init -input=false
+      - name: Terraform Plan
+        id: plan
+        working-directory: infra/coder/terraform
+        run: |
+          terraform plan -input=false \
+            -var region=${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }} \
+            -var ssh_cidr=$(curl -s https://ifconfig.me)/32 \
+            -out=tfplan
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: infra/coder/terraform
+        run: terraform apply -input=false -auto-approve tfplan
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        working-directory: infra/coder/terraform
+        run: |
+          terraform destroy -input=false -auto-approve \
+            -var region=${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }} \
+            -var ssh_cidr=$(curl -s https://ifconfig.me)/32
+
