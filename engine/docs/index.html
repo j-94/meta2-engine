@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The One Engine Journal — Language & Architecture</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="masthead">
+        <h1>The One Engine Journal</h1>
+        <div class="deck">Language & Architecture • Metacognition • Gates • Tiny Diffs</div>
+      </header>
+      <hr class="rule" />
+      <nav class="nav">
+        <a href="/swagger-ui">Swagger UI</a>
+        <a href="/api-docs/openapi.json">OpenAPI JSON</a>
+        <a href="/docs/api/">API (Redoc)</a>
+        <a href="/research/index">Research Index (JSON)</a>
+      </nav>
+
+      <article>
+        <h2 class="headline">Language Page: House Rules for a Bits‑Native System</h2>
+        <p class="subhead">A concise, readable style guide for working with A,U,P,E,Δ,I,R,T,M — designed like a newspaper for skimmability.</p>
+        <div class="columns">
+          <section>
+            <p class="byline">Dateline — Today</p>
+            <p class="dropcap">A Bits are the lingua franca. Every action is gated: Ask–Act (A=1 ∧ P=1 ∧ Δ=0) and Evidence (U≥τ → verify‑first). Keep prose minimal, show receipts, and ship tiny diffs.</p>
+            <div class="callout">
+              Speak in artifacts, not promises: a diff, a receipt, a golden comparison. When in doubt, compress to intent triad (goal, constraints, evidence).
+            </div>
+            <h3>Style</h3>
+            <ul>
+              <li>Short sentences, active voice, concrete nouns.</li>
+              <li>Prefer bullets over paragraphs; one idea per line.</li>
+              <li>Name bits and gates explicitly when relevant.</li>
+            </ul>
+            <h3>Bits Cheat Sheet</h3>
+            <ul>
+              <li><strong>A</strong> Alignment • <strong>U</strong> Uncertainty • <strong>P</strong> Permission • <strong>E</strong> Error</li>
+              <li><strong>Δ</strong> Drift • <strong>I</strong> Interrupt • <strong>R</strong> Recovery • <strong>T</strong> Trust • <strong>M</strong> Meta</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3>Control Laws</h3>
+            <ol>
+              <li>Ask–Act: only act when A=1 ∧ P=1 ∧ Δ=0.</li>
+              <li>Evidence: if U≥τ, verify‑first (dry‑run + refs).</li>
+              <li>CAPS: network/file_write/identity require P=1.</li>
+            </ol>
+            <h3>Rubrics</h3>
+            <p>Score results with <code>R = 2·pass − 0.1·time − 0.1·cost − 0.05·mdl</code>. Promote what reliably improves R on goldens.</p>
+            <h3>Links</h3>
+            <ul>
+              <li>Meta step: <code>POST /meta/run</code> → β plan + γ config pick.</li>
+              <li>Golden validation: <code>POST /validate_golden</code> → pass/fail + bits.</li>
+              <li>Chat loop: <code>POST /users/:id/chat</code> → reply + bits + beacons.</li>
+            </ul>
+            <div class="callout">
+              Closure beats scope: plan → act → verify → stop. If it’s not improving R or bits, it’s likely noise.
+            </div>
+          </section>
+        </div>
+      </article>
+
+      <footer class="footer">
+        © The One Engine Journal • This page renders like print: high‑contrast, serif, gentle paper texture.
+      </footer>
+    </main>
+  </body>
+  </html>
+

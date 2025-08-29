@@ -20,6 +20,8 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 shell-escape = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
 walkdir = "2"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-core = "0.3"
 
 [profile.release]
 codegen-units = 1
@@ -27,3 +29,7 @@ lto = "fat"
 opt-level = "z"
 panic = "abort"
 strip = "symbols"
+
+[[bin]]
+name = "one-research"
+path = "bin/one_research.rs"

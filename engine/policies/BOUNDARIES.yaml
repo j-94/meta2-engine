@@ -1,0 +1,13 @@
+# Atomic step boundaries for interruptibility
+boundaries:
+  - id: fetch_inputs
+    description: Collect inputs and validate schema
+  - id: plan_actions
+    description: Produce plan; no side effects
+  - id: verify_dry_run
+    description: Dry-run or static analysis
+  - id: act_apply
+    description: Apply action with guardrails
+  - id: verify_post
+    description: Post-checks and evidence collection
+

@@ -1,0 +1,16 @@
+# Retry and backoff policies
+backoff:
+  base_ms: 200
+  factor: 2.0
+  max_ms: 5000
+  max_retries: 3
+
+strategies:
+  order: ["cache", "alt_api", "offline"]
+  cache:
+    enabled: true
+  alt_api:
+    enabled: true
+  offline:
+    enabled: true
+

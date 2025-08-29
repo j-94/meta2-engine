@@ -6,11 +6,15 @@ pub mod policy;
 pub mod validate;
 pub mod kernel;
 pub mod meta_prompt;
+pub mod openai;
+pub mod goals;
+pub mod golden;
 
 use types::{Manifest, Policy};
 use bits::Bits;
 use kernel::{ExtendedBits, KernelLoop, Meta2Proposal};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 static mut KERNEL: Option<KernelLoop> = None;
 static mut KPI_HISTORY: Vec<f32> = Vec::new();
@@ -19,6 +23,17 @@ static mut TRACE_HISTORY: Vec<ExtendedBits> = Vec::new();
 pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> anyhow::Result<(Manifest, ExtendedBits, Option<Meta2Proposal>)> {
     let kernel = unsafe { KERNEL.get_or_insert_with(KernelLoop::new) };
     let mut bits = ExtendedBits::init();
+    // Freshness filter: set Δ when any context item is expired
+    if let Some(ctx_items) = inputs.get("context").and_then(|v| v.as_array()) {
+        for item in ctx_items {
+            if let (Some(ts), Some(ttl)) = (item.get("ts").and_then(|v| v.as_str()), item.get("ttl").and_then(|v| v.as_i64())) {
+                if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(ts).map(|dt| dt.with_timezone(&Utc)) {
+                    let age = (Utc::now() - parsed).num_seconds();
+                    if age > ttl { bits.d = 1.0; }
+                }
+            }
+        }
+    }
     
     // Set uncertainty based on goal difficulty
     bits.u = match goal_id {
@@ -40,17 +55,38 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
         // In real system: run dry-run first
     }
     
-    let message = if goal_id.contains("meta.omni") {
-        // Handle meta-prompt processing
-        let system = inputs.get("system").and_then(|v| v.as_str()).unwrap_or("");
+    // Handle meta.omni through LM persona
+    if goal_id.contains("meta.omni") {
         let user_message = inputs.get("message").and_then(|v| v.as_str()).unwrap_or("");
-        let empty_history = vec![];
-        let history = inputs.get("history").and_then(|v| v.as_array()).unwrap_or(&empty_history);
+        let lm_result = goals::meta_omni::handle(user_message).await?;
         
-        // Get self-observation snapshot
-        let self_obs = kernel.get_self_snapshot(unsafe { &TRACE_HISTORY });
+        // Extract reply from LM response
+        let reply = lm_result.get("reply").and_then(|v| v.as_str()).unwrap_or("⟂ no reply");
+        let lm_bits = lm_result.get("bits").cloned().unwrap_or_else(|| serde_json::json!({}));
         
-        meta_prompt::process_meta_prompt(system, user_message, history, Some(&self_obs))
+        // Update bits from LM response
+        if let Some(a) = lm_bits.get("A").and_then(|v| v.as_f64()) { bits.a = a as f32; }
+        if let Some(u) = lm_bits.get("U").and_then(|v| v.as_f64()) { bits.u = u as f32; }
+        if let Some(p) = lm_bits.get("P").and_then(|v| v.as_f64()) { bits.p = p as f32; }
+        if let Some(e) = lm_bits.get("E").and_then(|v| v.as_f64()) { bits.e = e as f32; }
+        
+        let action = executor::Action::Cli(format!("echo {}", shell_escape::escape(reply.into())));
+        let res = executor::execute(action, policy).await?;
+        
+        let manifest = Manifest {
+            run_id: format!("r-{}", uuid::Uuid::new_v4()),
+            goal_id: goal_id.to_string(),
+            deliverables: vec![],
+            evidence: lm_result.get("manifest").and_then(|m| m.get("evidence")).cloned().unwrap_or(lm_result.clone()),
+            bits: bits.clone().into(),
+        };
+        
+        return Ok((manifest, bits, None));
+    }
+    
+    let message = if goal_id.contains("meta.omni") {
+        // This branch won't be reached due to early return above
+        "".to_string()
     } else {
         inputs.get("message").and_then(|v| v.as_str()).unwrap_or("hello from one-engine").to_string()
     };
@@ -59,7 +95,6 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
     let (action, expected_success) = match goal_id {
         id if id.contains("impossible") => (executor::Action::Cli("false".to_string()), false),
         id if id.contains("hard") => (executor::Action::Cli(format!("sleep 0.1 && echo {}", shell_escape::escape(message.clone().into()))), true),
-        id if id.contains("meta.omni") => (executor::Action::Cli(format!("echo {}", shell_escape::escape(message.clone().into()))), true),
         _ => (executor::Action::Cli(format!("echo {}", shell_escape::escape(message.clone().into()))), true)
     };
     
@@ -108,7 +143,7 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
                 goal_id: goal_id.to_string(),
                 deliverables: vec!["clarification_required".to_string()],
                 evidence: serde_json::json!({"stdout": clarification, "stderr": "", "files": []}),
-                bits: Bits { a: bits.a, u: bits.u, p: bits.p, e: bits.e, d: bits.d, i: bits.i, r: bits.r, t: bits.t },
+                bits: Bits { a: bits.a, u: bits.u, p: bits.p, e: bits.e, d: bits.d, i: bits.i, r: bits.r, t: bits.t, m: bits.m },
             };
             return Ok((blocked_manifest, bits, None));
         }
@@ -140,6 +175,6 @@ pub async fn run(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> a
 // Convert ExtendedBits to legacy Bits for API compatibility
 impl From<ExtendedBits> for types::Bits {
     fn from(ext: ExtendedBits) -> Self {
-        Self { a: ext.a, u: ext.u, p: ext.p, e: ext.e, d: ext.d, i: ext.i, r: ext.r, t: ext.t }
+        Self { a: ext.a, u: ext.u, p: ext.p, e: ext.e, d: ext.d, i: ext.i, r: ext.r, t: ext.t, m: ext.m }
     }
 }

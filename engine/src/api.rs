@@ -1,10 +1,17 @@
-use axum::{extract::{State, Path}, Json, response::IntoResponse, http::HeaderMap};
+use axum::{extract::{State, Path, Query}, Json, response::{IntoResponse, sse::{Sse, Event}}, http::HeaderMap};
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use utoipa::{ToSchema, OpenApi};
-use crate::engine::{self, types::{Bits, Policy, Manifest}, validate};
+use crate::engine::{self, types::{Bits, Policy, Manifest}, validate, golden};
+use crate::{meta, nstar};
+use one_engine::research::{self, ResearchArtifact};
 use crate::integrations::{self, UIState, AgentGoal};
 use std::collections::HashMap;
+use std::convert::Infallible;
+use tokio::sync::broadcast;
+use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::StreamExt;
+use tokio::fs;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -44,6 +51,18 @@ impl Default for AppState {
     }
 }
 
+// Simple progress bus
+static mut PROGRESS_TX: Option<broadcast::Sender<String>> = None;
+fn progress_tx() -> broadcast::Sender<String> {
+    unsafe {
+        if let Some(tx) = &PROGRESS_TX { tx.clone() } else {
+            let (tx, _rx) = broadcast::channel(100);
+            PROGRESS_TX = Some(tx.clone());
+            tx
+        }
+    }
+}
+
 fn extract_api_key(headers: &HeaderMap) -> Option<String> {
     headers.get("x-api-key")
         .and_then(|v| v.to_str().ok())
@@ -72,6 +91,24 @@ pub struct UserRunResp {
     pub bits: Bits,
     pub pr_created: Option<String>,
     pub meta2_proposal: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
+pub struct ChatReq {
+    pub message: String,
+    #[serde(default)]
+    pub thread: Option<String>,
+    #[serde(default)]
+    pub policy: Option<Policy>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
+pub struct ChatResp {
+    pub run_id: String,
+    pub user_id: String,
+    pub reply: String,
+    pub manifest: Manifest,
+    pub bits: Bits,
 }
 
 #[utoipa::path(
@@ -203,6 +240,19 @@ pub struct ValidateResp {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
+pub struct GoldenReq { pub name: String }
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
+pub struct GoldenResp {
+    pub name: String,
+    pub total: usize,
+    pub passed: usize,
+    pub failed: usize,
+    pub details: Vec<engine::golden::GoldenCase>,
+    pub bits: Bits,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct ValidationResult {
     pub task: String,
     pub expected_difficulty: f32,
@@ -272,6 +322,22 @@ pub async fn validate_handler(State(_state): State<AppState>, Json(req): Json<Va
 }
 
 #[utoipa::path(
+    post,
+    path = "/validate_golden",
+    request_body = GoldenReq,
+    responses((status = 200, description = "Golden validation", body = GoldenResp))
+)]
+pub async fn validate_golden_handler(Json(req): Json<GoldenReq>) -> impl IntoResponse {
+    match engine::golden::validate_golden(&req.name).await {
+        Ok(sum) => {
+            let bits: Bits = sum.bits.into();
+            Json(GoldenResp{ name: sum.name, total: sum.total, passed: sum.passed, failed: sum.failed, details: sum.details, bits }).into_response()
+        },
+        Err(e) => (axum::http::StatusCode::BAD_REQUEST, e.to_string()).into_response()
+    }
+}
+
+#[utoipa::path(
     get,
     path = "/dashboard",
     responses(
@@ -299,6 +365,75 @@ pub async fn planning_handler() -> impl IntoResponse {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/users/{user_id}/chat",
+    request_body = ChatReq,
+    responses((status = 200, description = "Chat reply", body = ChatResp))
+)]
+pub async fn user_chat_handler(
+    State(state): State<AppState>,
+    Path(user_id): Path<String>,
+    headers: HeaderMap,
+    Json(req): Json<ChatReq>
+) -> impl IntoResponse {
+    // Auth
+    let api_key = match extract_api_key(&headers) { Some(k) => k, None => return (axum::http::StatusCode::UNAUTHORIZED, "Missing x-api-key").into_response() };
+    let user = match authenticate_user(&state, &api_key) { Some(u) if u.user_id==user_id => u, _ => return (axum::http::StatusCode::UNAUTHORIZED, "Invalid user").into_response() };
+    let policy = req.policy.or(user.policy_overrides.clone()).unwrap_or(Policy{ gamma_gate:0.5,time_ms:30000,max_risk:0.3,tiny_diff_loc:120 });
+
+    let run_id = format!("r-{}", uuid::Uuid::new_v4());
+    let tx = progress_tx();
+    let _ = tx.send(format!("{{\"run_id\":\"{}\",\"phase\":\"start\"}}", run_id));
+
+    // Use goal meta.omni
+    let inputs = serde_json::json!({"message": req.message});
+    match run_with_integrations("meta.omni", inputs, &policy).await {
+        Ok((manifest, bits, _pr, _m2)) => {
+            let reply = manifest.evidence.get("reply").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let _ = tx.send(format!("{{\"run_id\":\"{}\",\"phase\":\"done\"}}", run_id));
+            Json(ChatResp{ run_id, user_id: user.user_id, reply, manifest, bits }).into_response()
+        },
+        Err(e) => (axum::http::StatusCode::BAD_REQUEST, e.to_string()).into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ProgressQuery { pub run_id: Option<String> }
+
+#[utoipa::path(
+    get,
+    path = "/progress.sse",
+    responses((status = 200, description = "SSE progress stream"))
+)]
+pub async fn progress_sse_handler(Query(_q): Query<ProgressQuery>) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+    let rx = progress_tx().subscribe();
+    let stream = BroadcastStream::new(rx)
+        .filter_map(|evt| match evt { Ok(s) => Some(s), Err(_) => None })
+        .map(|s| Ok(Event::default().data(s)));
+    Sse::new(stream)
+}
+
+#[utoipa::path(
+    get,
+    path = "/golden/{name}",
+    responses((status = 200, description = "Golden trace JSON"))
+)]
+pub async fn golden_handler(Path(name): Path<String>) -> impl IntoResponse {
+    // basic sanitization: allow [a-zA-Z0-9_\-]
+    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c=='_' || c=='-') {
+        return (axum::http::StatusCode::BAD_REQUEST, "invalid name").into_response();
+    }
+    let path = format!("trace/golden/{}.json", name);
+    match fs::read_to_string(&path).await {
+        Ok(s) => match serde_json::from_str::<serde_json::Value>(&s) {
+            Ok(v) => Json(v).into_response(),
+            Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("invalid JSON: {}", e)).into_response(),
+        },
+        Err(e) => (axum::http::StatusCode::NOT_FOUND, format!("not found: {}", e)).into_response(),
+    }
+}
+
 async fn run_with_integrations(goal_id: &str, inputs: serde_json::Value, policy: &Policy) -> anyhow::Result<(Manifest, Bits, Option<String>, Option<String>)> {
     // 1. Search flywheel for context
     let _context = integrations::flywheel::search(goal_id).await?;
@@ -322,8 +457,28 @@ async fn run_with_integrations(goal_id: &str, inputs: serde_json::Value, policy:
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(version_handler, run_handler, validate_handler, dashboard_handler, planning_handler, user_run_handler, user_status_handler),
-    components(schemas(Bits, Policy, Manifest, RunReq, RunResp, VersionInfo, ValidateReq, ValidateResp, ValidationResult, UIState, AgentGoal, UserRunReq, UserRunResp, UserStatus)),
+    paths(version_handler, run_handler, validate_handler, validate_golden_handler, dashboard_handler, planning_handler, user_run_handler, user_status_handler, user_chat_handler, progress_sse_handler, golden_handler, research_index_handler, meta::meta_run_handler, meta::meta_state_handler, meta::meta_reset_handler, nstar::nstar_run_handler, nstar::nstar_hud_handler),
+    components(schemas(Bits, Policy, Manifest, RunReq, RunResp, VersionInfo, ValidateReq, ValidateResp, GoldenReq, GoldenResp, ValidationResult, UIState, AgentGoal, UserRunReq, UserRunResp, UserStatus, ChatReq, ChatResp, nstar::NStarRunReq, nstar::NStarRunResp, meta::MetaRunReq, meta::MetaRunResp, meta::MetaState)),
     tags((name="one-engine", description="Multi-tenant metacognitive system"))
 )]
 pub struct ApiDoc;
+
+#[utoipa::path(
+    get,
+    path = "/research/index",
+    responses((status = 200, description = "Research artifact index", body = [ResearchArtifact]))
+)]
+pub async fn research_index_handler() -> impl IntoResponse {
+    // Prefer on-disk index if present; else build from current workspace.
+    let disk = tokio::fs::read_to_string("research/index.jsonl").await;
+    let mut items: Vec<ResearchArtifact> = Vec::new();
+    if let Ok(s) = disk {
+        for line in s.lines() { if line.trim().is_empty() { continue; }
+            if let Ok(a) = serde_json::from_str::<ResearchArtifact>(line) { items.push(a); }
+        }
+    } else {
+        // Fallback: build ephemeral index from '.' (no network)
+        if let Ok(v) = research::build_index(std::path::Path::new(".")) { items = v; }
+    }
+    Json(items)
+}

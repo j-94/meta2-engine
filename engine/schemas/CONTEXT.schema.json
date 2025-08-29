@@ -1,0 +1,15 @@
+{
+  "$id": "CONTEXT.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Context Item",
+  "type": "object",
+  "required": ["id", "src", "ts", "ttl", "hash"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable identifier" },
+    "src": { "type": "string", "description": "Provenance/source URI or label" },
+    "ts": { "type": "string", "format": "date-time", "description": "Ingest timestamp" },
+    "ttl": { "type": "integer", "minimum": 0, "description": "Time-to-live in seconds" },
+    "hash": { "type": "string", "description": "Content hash for freshness/diff" }
+  }
+}
+

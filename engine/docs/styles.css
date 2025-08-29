@@ -1,0 +1,126 @@
+/* Newspaper-like styling with subtle paper texture */
+:root {
+  --paper: #fbf8f3;
+  --ink: #1b1b1b;
+  --ink-soft: #333;
+  --accent: #5a6a7a;
+  --rule: rgba(0,0,0,0.08);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    /* faint vertical grain */
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.012) 0 1px, rgba(255,255,255,0.012) 1px 4px),
+    /* faint horizontal lines */
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0 23px, rgba(0,0,0,0.03) 23px 24px, rgba(0,0,0,0.015) 24px 48px),
+    radial-gradient(1000px 600px at 50% -20%, rgba(0,0,0,0.04), transparent 60%),
+    var(--paper);
+  background-attachment: fixed;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  line-height: 1.6;
+}
+
+.page {
+  max-width: 1000px;
+  margin: 2rem auto;
+  background: #fdfbf7;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.6) inset, 0 -1px 0 rgba(0,0,0,0.03) inset;
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 2.5rem 2rem;
+}
+
+.masthead {
+  text-align: center;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.masthead h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.masthead .deck {
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 1rem 0 1.25rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.nav a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+
+.headline {
+  font-size: 2rem;
+  line-height: 1.25;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.subhead {
+  font-size: 1rem;
+  color: var(--accent);
+  margin: 0 0 1rem;
+}
+
+.columns {
+  column-count: 2;
+  column-gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .columns { column-count: 1; }
+}
+
+.dropcap:first-letter {
+  float: left;
+  font-size: 3.2rem;
+  line-height: 0.9;
+  padding: 0.2rem 0.4rem 0 0.2rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.byline {
+  font-style: italic;
+  color: var(--accent);
+  margin: 0.25rem 0 1.5rem;
+}
+
+.callout {
+  break-inside: avoid;
+  background: rgba(255,255,240,0.6);
+  border-left: 4px solid var(--rule);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  font-family: "Times New Roman", Georgia, Times, serif;
+}
+
+.footer {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-align: center;
+}
+

@@ -2,6 +2,22 @@ build: ; cargo build --release
 run: ; RUST_LOG=info cargo run
 musl: ; cross build --release --target x86_64-unknown-linux-musl
 
+# Setup local dev environment and git hooks
+.PHONY: init
+init:
+	@echo "Setting up git hooks and Rust components..."
+	@rustup component add rustfmt clippy >/dev/null 2>&1 || true
+	@git config core.hooksPath .githooks
+	@echo "Hooks path set to .githooks"
+	@echo "Done. Commits will run fmt/clippy checks locally."
+
+.PHONY: field-publish
+field-publish:
+	@python3 scripts/field_publish.py field/*.md
+
+.PHONY: research-index
+research-index: ; cargo run --bin one-research -- --root . --out research/index.jsonl
+
 # Meta² Chat Interface
 chat: ; ./meta2-chat $(USER) $(KEY) $(THREAD)
 chat-demo: ; ./meta2-chat demo demo-key-123 omni-demo
