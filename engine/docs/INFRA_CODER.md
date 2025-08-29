@@ -10,6 +10,11 @@ This folder contains a minimal Terraform configuration and GitHub Action to prov
 
 Tracking: open a new Issue using the template “Coder OIDC/AWS Setup”. When finished, edit the infra PR description to include `Closes #<issue_number>` so it auto‑closes on merge.
 
+### Least‑Privilege Policy (example)
+Start with EC2FullAccess to bootstrap, then swap to a scoped policy like `infra/coder/terraform/policies/least_privilege_ec2.json` attached to the OIDC role.
+
+Apply via console (create a new policy with that JSON) or CLI, then detach EC2FullAccess.
+
 ## Run from GitHub
 - Go to Actions → "Coder Deploy" → Run workflow
   - action: apply (to create) or destroy

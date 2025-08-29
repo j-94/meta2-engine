@@ -29,6 +29,8 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      - name: AWS whoami (verify OIDC)
+        run: aws sts get-caller-identity
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -48,6 +50,25 @@ jobs:
         if: inputs.action == 'apply'
         working-directory: infra/coder/terraform
         run: terraform apply -input=false -auto-approve tfplan
+      - name: Capture Terraform Outputs
+        if: inputs.action == 'apply'
+        id: tfout
+        working-directory: infra/coder/terraform
+        run: |
+          echo "PUBLIC_IP=$(terraform output -raw public_ip)" >> $GITHUB_ENV
+          echo "PUBLIC_DNS=$(terraform output -raw public_dns)" >> $GITHUB_ENV
+          echo "Public IP: $(terraform output -raw public_ip)"
+      - name: Seed Coder templates (optional)
+        if: inputs.action == 'apply' && secrets.CODER_ADMIN_TOKEN != ''
+        env:
+          CODER_ADMIN_TOKEN: ${{ secrets.CODER_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Seeding templates on http://$PUBLIC_IP ..."
+          curl -fsSL https://coder.com/install.sh | sh
+          coder login "http://$PUBLIC_IP" --token "$CODER_ADMIN_TOKEN" --force
+          coder templates pull coder/coder-templates || true
+          coder templates list || true
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
         working-directory: infra/coder/terraform
@@ -55,4 +76,3 @@ jobs:
           terraform destroy -input=false -auto-approve \
             -var region=${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }} \
             -var ssh_cidr=$(curl -s https://ifconfig.me)/32
-
