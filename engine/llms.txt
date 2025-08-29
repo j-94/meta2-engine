@@ -1,0 +1,79 @@
+LLMs Integration (Living Notes)
+
+Purpose
+- Document how this repo talks to LLM providers and how to “hack”/swap OpenAI‑compatible endpoints without code changes. Treat this as living documentation: update in PRs as you add models/providers.
+
+Quick Start
+- Env vars (set before running the server):
+  - OPENAI_API_KEY=sk_...
+  - OPENAI_API_URL=https://api.openai.com/v1 (override to point at gateways such as Azure/OpenRouter/local proxies)
+- Demo call through our engine (uses the configured provider):
+  - curl -s -X POST \
+    -H 'x-api-key: demo-key-123' \
+    -H 'content-type: application/json' \
+    http://127.0.0.1:8080/users/demo/chat \
+    -d '{"message":"hello"}' | jq
+
+OpenAI‑Compatible Endpoints (Chat Completions)
+- Default client: src/engine/openai.rs
+  - POST {OPENAI_API_URL}/chat/completions
+  - Headers: Authorization: Bearer ${OPENAI_API_KEY}, Content-Type: application/json
+  - Body (minimal):
+    {"model":"gpt-3.5-turbo","response_format":{"type":"json_object"},
+     "messages":[{"role":"system","content":SYSTEM},{"role":"user","content":USER}]}
+- Expected JSON path: choices[0].message.content (string, may be JSON)
+- Fallbacks: if non‑200 or non‑JSON, we degrade gracefully and set bits {A:0,U:1,P:0,E:1,Δ:0,I:0,R:0,T:0,M:0}.
+
+Hacking Providers (no code changes)
+1) Azure OpenAI (chat)
+   - OPENAI_API_URL=https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions?api-version=2024-02-15-preview
+   - OPENAI_API_KEY=<azure_key>
+   - Note: header stays Authorization: Bearer KEY for our thin client; if your gateway requires api-key header, use a simple reverse proxy to translate headers.
+
+2) OpenRouter
+   - OPENAI_API_URL=https://openrouter.ai/api/v1/chat/completions
+   - OPENAI_API_KEY=<openrouter_key>
+
+3) Local gateway (e.g., llama.cpp / vLLM with OpenAI shim)
+   - OPENAI_API_URL=http://127.0.0.1:8000/v1/chat/completions
+   - OPENAI_API_KEY=dummy
+
+Response Shape Contracts (we depend on)
+- The client reads choices[0].message.content (string). If that string parses as JSON, we use it directly (preferred for bits‑aware replies). Otherwise we wrap it.
+- Bits contract expected inside the JSON when available: {A,U,P,E,Δ,I,R,T,M}
+
+Safety & Meta‑Control (how calls are governed)
+- Ask–Act gate: actions only when A=1 ∧ P=1 ∧ Δ=0 (kernel.rs)
+- Evidence gate: if U≥τ → verify‑first (docs/VERIFY.md) before acting on LLM suggestions
+- CAPS: network/file_write/identity ops require P=1 (policies/CAPS.yaml)
+- These gates apply regardless of which provider you point to.
+
+Test Matrix
+- No‑network fallback:
+  - Unset OPENAI_API_KEY → /users/*/chat returns a safe fallback with bits (U=0,E=0 or error state)
+- Gateway swap:
+  - Change OPENAI_API_URL and rerun a demo chat; ensure 200/choices[0] path still works
+- JSON mode:
+  - Provide a system prompt that instructs JSON output with bits to exercise the bits path
+
+Examples
+- Direct provider probe (optional):
+  curl -s "${OPENAI_API_URL}/models" -H "Authorization: Bearer ${OPENAI_API_KEY}"
+- Engine chat (preferred):
+  curl -s -X POST -H 'x-api-key: demo-key-123' -H 'content-type: application/json' \
+    http://127.0.0.1:8080/users/demo/chat -d '{"message":"who am i?"}' | jq
+
+Where This Lives in the Stack
+- L1: call shapes & error handling (openai.rs)
+- L2: gates (ask‑act/evidence) and bits mapping guard the effect of outputs
+- L3: meta proposals (policy tuning) react to KPI trends, not to provider specifics
+- (Optional L4) Constitutional guard: you can codify provider policies here (allowed models, required response_format, max token cost) and enforce via CI.
+
+Living Documentation Rules
+- Keep provider URLs, version parameters, and header quirks updated here
+- Add a short “verified against” note when you test a new provider/gateway
+- Link PRs that change call shapes, so docs preview on PRs remains accurate
+
+Changelog (append entries)
+- v0.1: Initial OpenAI‑compatible notes, provider overrides via env
+
