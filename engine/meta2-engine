@@ -18,6 +18,10 @@ elif [[ "$1" == "prompts" ]]; then
   shift
   python "$SCRIPT_DIR/prompt_baker.py" "$@"
   exit $?
+elif [[ "$1" == "search" ]]; then
+  shift
+  python "$SCRIPT_DIR/search_runner.py" "$@"
+  exit $?
 fi
 
 GOAL="$1"
