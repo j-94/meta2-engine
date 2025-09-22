@@ -45,7 +45,7 @@ This document compiles the essential context to derive ONE production architectu
 - Use for regression + CI gates.
 
 ## 7) Research Library (Compression)
-- Indexer: `one-research` binary (or `make research-index`) builds `research/index.jsonl`.
+- Indexer: `one-research` binary (or `make research-index`) builds `research/index.jsonl` and freshness report `research/report.json`.
 - Sources: prompts, policies, schemas, docs, golden.
 - Provenance: checksum + git branch/commit.
 
@@ -83,7 +83,7 @@ This document compiles the essential context to derive ONE production architectu
 - Chat demo: `curl -s -X POST -H 'x-api-key: demo-key-123' -H 'content-type: application/json' http://127.0.0.1:8080/users/demo/chat -d '{"message":"hello"}'`
 - Meta pick: `curl -s -X POST -H 'content-type: application/json' http://127.0.0.1:8080/meta/run -d '{"task":"compress_chatlog"}'`
 - Golden validate: `curl -s -X POST -H 'content-type: application/json' http://127.0.0.1:8080/validate_golden -d '{"name":"wolfram_unity"}'`
-- Research index: `make research-index`
+- Research index/report: `make research-index`
 
 ---
 
