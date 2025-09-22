@@ -1,39 +1,35 @@
+use anyhow::Result;
 use serde_json::{json, Value};
+use crate::engine::openai::call_openai;
+use std::fs;
 
-pub fn process_meta_prompt(system: &str, message: &str, history: &[Value], self_obs: Option<&str>) -> String {
-    let context_summary = if history.is_empty() {
-        "No previous context".to_string()
-    } else {
-        format!("Previous {} interactions", history.len())
-    };
+pub async fn handle(message: &str, bits: &crate::engine::bits::Bits) -> Result<Value> {
+    // Load composed persona/system prompt
+    let sys = fs::read_to_string("prompts/meta_omni.md")
+        .unwrap_or_else(|_| "You are One Engine v0.2, a metacognitive AI system. Respond conversationally.".to_string());
     
-    let mut evidence = vec![context_summary];
-    if let Some(obs) = self_obs {
-        evidence.push(format!("Self-observation: {}", obs));
-    }
+    let response = call_openai(&sys, message, "gpt-3.5-turbo").await?;
     
-    let response = json!({
+    Ok(json!({
         "intent": {
-            "goal": message,
+            "goal": response,
             "constraints": ["Follow bits-native protocol", "Propose minimal diffs only"],
-            "evidence": evidence
+            "evidence": ["OpenAI chat response", "System prompt loaded"]
         },
-        "bits": {
-            "A": 1, "U": 0, "P": 1, "E": 0, "Δ": 0, "I": 0, "R": 0, 
-            "T": if self_obs.is_some() { 1 } else { 0 }, "M": 0
-        },
-        "patch": {
-            "files": [],
-            "post_checks": ["Validate against schema", "Run tests"]
-        },
+        "bits": bits,
         "explanation": {
-            "assumptions": ["User request is well-formed", "System has necessary permissions"],
-            "evidence": ["META_OMNI.md system prompt", "User message context"],
-            "limits": ["Cannot perform side effects", "Must respect L2/L3 gates"],
-            "self": self_obs.unwrap_or("No self-observation available")
-        },
-        "questions": []
-    });
-    
-    serde_json::to_string_pretty(&response).unwrap_or_else(|_| message.to_string())
+            "self": format!("effectiveness={:.2}, uncertainty={:.2}", bits.a, bits.u)
+        }
+    }))
+}
+
+// Legacy function for compatibility
+pub fn process_meta_prompt(_system: &str, message: &str, _history: &[Value], _self_obs: Option<&str>) -> String {
+    // Simple fallback response
+    match message.to_lowercase().as_str() {
+        msg if msg.contains("who am i") => "I am One Engine v0.2, a metacognitive AI system with self-awareness capabilities.".to_string(),
+        msg if msg.contains("hello") => "Hello! I'm One Engine, ready to assist with metacognitive validation and adaptive control.".to_string(),
+        msg if msg.contains("help") => "I can process tasks with uncertainty tracking, trust calibration, and failure awareness. Try asking about my capabilities!".to_string(),
+        _ => "I'm processing your request with metacognitive awareness. How can I help you today?".to_string()
+    }
 }

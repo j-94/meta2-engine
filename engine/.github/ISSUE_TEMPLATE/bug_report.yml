@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible problem
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Provide minimal steps and sample input
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version/commit
+      description: Output of `git rev-parse --short HEAD` or tag
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      render: shell
+      description: Error logs or stack traces
+

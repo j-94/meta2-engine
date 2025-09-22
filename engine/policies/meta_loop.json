@@ -1,0 +1,19 @@
+{
+  "telemetry": ["pass", "cost", "time", "mdl"],
+  "rubric": "2*pass - 0.1*time - 0.1*cost - 0.05*mdl",
+  "beta_plans": [
+    {"id": "direct"},
+    {"id": "single_tool"},
+    {"id": "two_step"}
+  ],
+  "gamma_configs": [
+    {"id": "small350", "model": "small", "chunk": 350, "topk": 6},
+    {"id": "base600",  "model": "base",  "chunk": 600, "topk": 12}
+  ],
+  "policy": {
+    "selector": "UCB",
+    "hysteresis_eps": 0.2,
+    "min_trials_per_arm": 3
+  }
+}
+

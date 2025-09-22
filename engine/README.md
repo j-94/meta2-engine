@@ -70,3 +70,41 @@ curl -s -X POST http://127.0.0.1:8080/run -d '{"goal_id":"impossible.test","inpu
 - `POST /run` → execute single task, return manifest + bits
 - `POST /validate` → run metacognitive test suite
 - `GET /swagger-ui` → interactive API docs
+ - `POST /users/{user_id}/chat` → chat-style loop using `meta.omni` goal; requires `x-api-key`
+ - `GET /progress.sse` → server-sent progress beacons `{run_id, phase}`
+ - `GET /golden/{name}` → returns golden trace JSON from `trace/golden/{name}.json`
+ - `POST /nstar/run` → run the Python 4-layer loop on a task
+ - `GET /nstar/hud` → simple HTML tail view of `trace/receipts.jsonl`
+ - `POST /meta/run` → run a single meta selection step (β plan + γ config via UCB)
+ - `POST /validate_golden` → validate a golden suite by name
+
+### Chat quickstart
+```bash
+curl -s -X POST \
+  -H 'x-api-key: demo-key-123' \
+  -H 'content-type: application/json' \
+  http://127.0.0.1:8080/users/demo/chat \
+  -d '{"message":"hello"}' | jq
+```
+
+### Golden traces
+```bash
+curl -s http://127.0.0.1:8080/golden/wolfram_unity | jq
+curl -s -X POST -H 'content-type: application/json' http://127.0.0.1:8080/validate_golden -d '{"name":"wolfram_unity"}' | jq
+```
+
+### N* loop
+```bash
+curl -s -X POST -H 'content-type: application/json' \
+  http://127.0.0.1:8080/nstar/run \
+  -d '{"task":"Add unit tests for payment calculator"}' | jq
+# open HUD
+open http://127.0.0.1:8080/nstar/hud
+```
+
+### Meta selection step
+```bash
+curl -s -X POST -H 'content-type: application/json' \
+  http://127.0.0.1:8080/meta/run \
+  -d '{"task":"compress_chatlog"}' | jq
+```

@@ -1,12 +1,16 @@
 mod api;
 mod engine;
 mod integrations;
+mod nstar;
+mod meta;
 
-use axum::{Router, routing::{get, post}};
+use axum::{Router, routing::{get, post, get_service}};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use tokio::net::TcpListener;
+use tower_http::services::ServeDir;
+use axum::http::StatusCode;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,16 +20,30 @@ async fn main() -> anyhow::Result<()> {
     let state = api::AppState::default();
     let openapi = api::ApiDoc::openapi();
 
+    let docs_service = get_service(ServeDir::new("docs")).handle_error(|_| async move {
+        (StatusCode::INTERNAL_SERVER_ERROR, "static file error")
+    });
+
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
         .route("/version", get(api::version_handler))
         .route("/run", post(api::run_handler))
         .route("/validate", post(api::validate_handler))
+        .route("/golden/:name", get(api::golden_handler))
         .route("/dashboard", get(api::dashboard_handler))
         .route("/planning", get(api::planning_handler))
+        .route("/research/index", get(api::research_index_handler))
+        .nest_service("/docs", docs_service)
         // Multi-tenant user endpoints
         .route("/users/:user_id/run", post(api::user_run_handler))
+        .route("/users/:user_id/chat", post(api::user_chat_handler))
+        .route("/progress.sse", get(api::progress_sse_handler))
         .route("/users/:user_id/status", get(api::user_status_handler))
+        .route("/nstar/run", post(nstar::nstar_run_handler))
+        .route("/nstar/hud", get(nstar::nstar_hud_handler))
+        .route("/meta/run", post(meta::meta_run_handler))
+        .route("/meta/state", get(meta::meta_state_handler))
+        .route("/meta/reset", post(meta::meta_reset_handler))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi))
         .with_state(state);
 

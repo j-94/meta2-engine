@@ -1,0 +1,43 @@
+name: Docs Preview
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate OpenAPI JSON by running server
+        run: |
+          mkdir -p docs/api
+          ( RUST_LOG=warn cargo run --bin one-engine & echo $! > server.pid )
+          sleep 1
+          curl -sS http://127.0.0.1:8080/api-docs/openapi.json > docs/api/openapi.json
+          kill $(cat server.pid) || true
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,6 +1,5 @@
 # Rust
 /target/
-Cargo.lock
 
 # IDE
 .vscode/
@@ -17,6 +16,7 @@ users/
 # Logs
 *.log
 trace/
+!trace/golden/**
 
 # Build artifacts
 *.exe

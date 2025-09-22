@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "cargo not found; skipping Rust checks" >&2
+  exit 0
+fi
+
+echo "[pre-commit] cargo fmt --check"
+cargo fmt --all -- --check
+
+echo "[pre-commit] cargo clippy -D warnings"
+cargo clippy --all-targets -- -D warnings
+
+echo "[pre-commit] OK"
+

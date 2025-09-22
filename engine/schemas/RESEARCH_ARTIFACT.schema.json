@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Research Artifact",
+  "type": "object",
+  "required": ["id", "kind", "path", "ts", "ttl", "checksum"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable identifier (path#checksum)" },
+    "kind": { "type": "string", "enum": ["prompt", "policy", "schema", "trace", "doc", "code", "dataset", "other"] },
+    "path": { "type": "string" },
+    "ts": { "type": "string", "format": "date-time" },
+    "ttl": { "type": "integer", "minimum": 0 },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "bits": {
+      "type": "object",
+      "properties": {"A": {"type":"number"}, "U": {"type":"number"}, "P": {"type":"number"}, "E": {"type":"number"}, "Δ": {"type":"number"}, "I": {"type":"number"}, "R": {"type":"number"}, "T": {"type":"number"}, "M": {"type":"number"}}
+    },
+    "meta": { "type": "object" },
+    "checksum": { "type": "string", "description": "Adler32 hex of content" }
+  }
+}
+

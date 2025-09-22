@@ -1,0 +1,11 @@
+# Escalation lanes for human hand-off
+lanes:
+  - id: product
+    owner: "@j-94"
+    sla_minutes: 60
+    required_bits: ["U", "I"]
+  - id: infra
+    owner: "@j-94"
+    sla_minutes: 120
+    required_bits: ["E", "R"]
+

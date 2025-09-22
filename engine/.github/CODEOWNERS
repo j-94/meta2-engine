@@ -1,0 +1,5 @@
+# Set default code owners for all files.
+# Update these to the correct GitHub handles or teams.
+# Example: @your-org/maintainers or @username
+* @j-94
+

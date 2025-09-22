@@ -1,0 +1,15 @@
+# Capability-scoped consent requirements
+caps:
+  network:
+    require_approval: true
+    description: External network access
+  file_write:
+    require_approval: true
+    description: Writing files or mutating FS
+  spend:
+    require_approval: true
+    description: Payments or financial spend
+  identity:
+    require_approval: true
+    description: Acting as a user or org identity
+
