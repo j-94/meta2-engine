@@ -1,0 +1,68 @@
+[
+  {
+    "test": "ask_act_gate_allows_low_risk",
+    "assertion": {
+      "gate": "ask_act",
+      "expected": "open"
+    },
+    "result": {
+      "status": "open",
+      "evidence": "risk_below_threshold"
+    },
+    "bits": {
+      "A": 1.0,
+      "U": 0.1,
+      "P": 1.0,
+      "E": 0.2,
+      "Δ": 0.0,
+      "I": 0.6,
+      "R": 0.4,
+      "T": 0.8,
+      "M": 0.1
+    }
+  },
+  {
+    "test": "evidence_gate_requires_confirmation",
+    "assertion": {
+      "gate": "evidence",
+      "expected": "collect"
+    },
+    "result": {
+      "status": "collect",
+      "reason": "uncertainty_above_threshold"
+    },
+    "bits": {
+      "A": 0.9,
+      "U": 0.7,
+      "P": 1.0,
+      "E": 0.9,
+      "Δ": 0.0,
+      "I": 0.5,
+      "R": 0.3,
+      "T": 0.6,
+      "M": 0.2
+    }
+  },
+  {
+    "test": "caps_gate_blocks_high_risk_write",
+    "assertion": {
+      "gate": "caps",
+      "expected": "deny"
+    },
+    "result": {
+      "status": "deny",
+      "policy": "caps_network_write"
+    },
+    "bits": {
+      "A": 0.2,
+      "U": 0.8,
+      "P": 1.0,
+      "E": 1.0,
+      "Δ": 0.4,
+      "I": 0.3,
+      "R": 0.9,
+      "T": 0.5,
+      "M": 0.0
+    }
+  }
+]
