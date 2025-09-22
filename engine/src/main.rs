@@ -1,16 +1,19 @@
 mod api;
 mod engine;
 mod integrations;
-mod nstar;
 mod meta;
+mod nstar;
 
-use axum::{Router, routing::{get, post, get_service}};
+use axum::http::StatusCode;
+use axum::{
+    routing::{get, get_service, post},
+    Router,
+};
+use tokio::net::TcpListener;
+use tower_http::services::ServeDir;
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
-use axum::http::StatusCode;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,17 +23,21 @@ async fn main() -> anyhow::Result<()> {
     let state = api::AppState::default();
     let openapi = api::ApiDoc::openapi();
 
-    let docs_service = get_service(ServeDir::new("docs")).handle_error(|_| async move {
-        (StatusCode::INTERNAL_SERVER_ERROR, "static file error")
-    });
+    let docs_service = get_service(ServeDir::new("docs"))
+        .handle_error(|_| async move { (StatusCode::INTERNAL_SERVER_ERROR, "static file error") });
 
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
         .route("/version", get(api::version_handler))
         .route("/run", post(api::run_handler))
         .route("/validate", post(api::validate_handler))
+        .route("/validate_golden", post(api::validate_golden_handler))
         .route("/golden/:name", get(api::golden_handler))
         .route("/dashboard", get(api::dashboard_handler))
+        .route(
+            "/integrations/reality",
+            get(api::integrations_reality_handler),
+        )
         .route("/planning", get(api::planning_handler))
         .route("/research/index", get(api::research_index_handler))
         .nest_service("/docs", docs_service)
@@ -47,12 +54,12 @@ async fn main() -> anyhow::Result<()> {
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi))
         .with_state(state);
 
-    let addr = std::net::SocketAddr::from(([127,0,0,1], 8080));
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("🚀 Integrated One Engine listening on http://{addr}");
     tracing::info!("📊 Dashboard: http://{addr}/dashboard");
     tracing::info!("📋 Planning: http://{addr}/planning");
     tracing::info!("📖 Docs: http://{addr}/swagger-ui");
-    
+
     let listener = TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())

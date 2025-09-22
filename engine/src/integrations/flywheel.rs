@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -18,15 +18,23 @@ pub async fn search(query: &str) -> anyhow::Result<Vec<SearchResult>> {
         relevance: 0.85,
         metadata: json!({"source": "flywheel"}),
     }];
-    
+
     Ok(results)
 }
 
-pub async fn update_metadata(goal_id: &str, manifest: &crate::engine::types::Manifest, trust: f32) -> anyhow::Result<()> {
-    tracing::info!("Updated metadata for goal {} with trust {:.2}", goal_id, trust);
-    
+pub async fn update_metadata(
+    goal_id: &str,
+    _manifest: &crate::engine::types::Manifest,
+    trust: f32,
+) -> anyhow::Result<()> {
+    tracing::info!(
+        "Updated metadata for goal {} with trust {:.2}",
+        goal_id,
+        trust
+    );
+
     // In a real system, this would update the embeddings index
     // with new information from successful runs
-    
+
     Ok(())
 }
