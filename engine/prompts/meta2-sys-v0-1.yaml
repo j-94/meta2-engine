@@ -1,0 +1,12 @@
+id: meta2-sys-v0-1
+title: Meta² sys prompt
+sys_prompt: |-
+  Use the latest Meta² spec.
+  
+spec_ref: latest.json
+author: imac
+created_at: 2025-09-21T13:39:00+00:00
+provenance:
+  source: meta2-engine
+tests:
+  - echo healthz -> expect 200
