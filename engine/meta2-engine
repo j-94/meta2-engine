@@ -2,6 +2,28 @@
 set -euo pipefail
 
 # Meta² Engine CLI - Direct interface to the metacognitive system
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: meta2-engine <goal|heuristics> [options]" >&2
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ "$1" == "heuristics" ]]; then
+  shift
+  python "$SCRIPT_DIR/heuristic_refinement.py" "$@"
+  exit $?
+elif [[ "$1" == "prompts" ]]; then
+  shift
+  python "$SCRIPT_DIR/prompt_baker.py" "$@"
+  exit $?
+elif [[ "$1" == "search" ]]; then
+  shift
+  python "$SCRIPT_DIR/search_runner.py" "$@"
+  exit $?
+fi
+
 GOAL="$1"
 shift
 
