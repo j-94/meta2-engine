@@ -16,7 +16,7 @@ field-publish:
 	@python3 scripts/field_publish.py field/*.md
 
 .PHONY: research-index
-research-index: ; cargo run --bin one-research -- --root . --out research/index.jsonl
+research-index: ; cargo run --bin one-research -- --root . --out research/index.jsonl --report-out research/report.json
 
 # Meta² Chat Interface
 chat: ; ./meta2-chat $(USER) $(KEY) $(THREAD)

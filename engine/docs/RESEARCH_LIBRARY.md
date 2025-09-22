@@ -17,11 +17,13 @@ A compact, auditable collection of prompts, policies, schemas, traces, and docs 
 - See `schemas/RESEARCH_ARTIFACT.schema.json`.
 - Minimal fields: `{id, kind, path, ts, ttl, tags, checksum}`
 
-## Building the Index
+## Building the Index & Reports
 - CLI: `one-research` (binary in this crate)
-- Example:
-  - cargo run --bin one-research -- --root . --out research/index.jsonl
-  - Or via Make: `make research-index`
+- Examples:
+  - `cargo run --bin one-research -- --root . --out research/index.jsonl`
+  - `cargo run --bin one-research -- --root . --report-out research/report.json`
+  - Or via Make: `make research-index` (writes both the index and `research/report.json`)
+- The report surfaces counts by kind/tag/branch plus TTL-based freshness alerts.
 
 ## Bringing External Repos
 - Option A: clone them under `external/` and run the indexer with `--root external`.
