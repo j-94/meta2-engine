@@ -1,0 +1,21 @@
+[
+  {
+    "test": "wolfram.unity.structure",
+    "assertion": "bits remain within expected [0,1] envelope",
+    "result": {
+      "description": "Baseline unity trace snapshot",
+      "source": "meta2-engine"
+    },
+    "bits": {
+      "A": 1.0,
+      "U": 0.25,
+      "P": 1.0,
+      "E": 0.0,
+      "Δ": 0.0,
+      "I": 0.2,
+      "R": 0.1,
+      "T": 0.85,
+      "M": 0.0
+    }
+  }
+]

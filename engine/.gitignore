@@ -15,7 +15,9 @@ users/
 
 # Logs
 *.log
-trace/
+trace/*
+!trace/golden/
+trace/golden/*
 !trace/golden/**
 
 # Build artifacts

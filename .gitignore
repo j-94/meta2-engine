@@ -32,3 +32,10 @@ POS_TOKEN.json
 *.dll
 *.so
 *.dylib
+
+# Golden fixtures are tracked
+!engine/trace/
+engine/trace/*
+!engine/trace/golden/
+engine/trace/golden/*
+!engine/trace/golden/*.json

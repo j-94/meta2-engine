@@ -1,15 +1,16 @@
+use crate::engine::openai::call_openai;
 use anyhow::Result;
 use serde_json::{json, Value};
-use crate::engine::openai::call_openai;
 use std::fs;
 
 pub async fn handle(message: &str, bits: &crate::engine::bits::Bits) -> Result<Value> {
     // Load composed persona/system prompt
-    let sys = fs::read_to_string("prompts/meta_omni.md")
-        .unwrap_or_else(|_| "You are One Engine v0.2, a metacognitive AI system. Respond conversationally.".to_string());
-    
+    let sys = fs::read_to_string("prompts/meta_omni.md").unwrap_or_else(|_| {
+        "You are One Engine v0.2, a metacognitive AI system. Respond conversationally.".to_string()
+    });
+
     let response = call_openai(&sys, message, "gpt-3.5-turbo").await?;
-    
+
     Ok(json!({
         "intent": {
             "goal": response,
@@ -24,7 +25,12 @@ pub async fn handle(message: &str, bits: &crate::engine::bits::Bits) -> Result<V
 }
 
 // Legacy function for compatibility
-pub fn process_meta_prompt(_system: &str, message: &str, _history: &[Value], _self_obs: Option<&str>) -> String {
+pub fn process_meta_prompt(
+    _system: &str,
+    message: &str,
+    _history: &[Value],
+    _self_obs: Option<&str>,
+) -> String {
     // Simple fallback response
     match message.to_lowercase().as_str() {
         msg if msg.contains("who am i") => "I am One Engine v0.2, a metacognitive AI system with self-awareness capabilities.".to_string(),
