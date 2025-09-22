@@ -1,13 +1,14 @@
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde_json::{json, Value};
 use std::fs;
 
 use crate::engine::openai::chat_json;
 
 pub async fn handle(user_msg: &str) -> Result<Value> {
-    let system = fs::read_to_string("prompts/META_OMNI.md")
-        .unwrap_or_else(|_| "You are One Engine v0.2. Respond with JSON containing a 'reply' field.".to_string());
-    
+    let system = fs::read_to_string("prompts/META_OMNI.md").unwrap_or_else(|_| {
+        "You are One Engine v0.2. Respond with JSON containing a 'reply' field.".to_string()
+    });
+
     // Try OpenAI, fallback to simple response on error
     let out = match chat_json(&system, user_msg).await {
         Ok(response) => response,
@@ -31,11 +32,23 @@ pub async fn handle(user_msg: &str) -> Result<Value> {
     };
 
     // Hard guards: ensure required fields present
-    let bits = out.get("bits").cloned().unwrap_or(json!({"A":0,"U":1,"P":0,"E":0,"Δ":0,"I":0,"R":0,"T":0,"M":0}));
-    let reply = out.get("reply").and_then(|v| v.as_str()).unwrap_or("⟂ no reply");
-    let intent = out.get("intent").cloned().unwrap_or(json!({"goal":"chat","constraints":[],"evidence":[]}));
-    let patch  = out.get("patch").cloned().unwrap_or(Value::Null);
-    let explanation = out.get("explanation").cloned().unwrap_or(json!({"assumptions":[],"evidence":[],"limits":[]}));
+    let bits = out
+        .get("bits")
+        .cloned()
+        .unwrap_or(json!({"A":0,"U":1,"P":0,"E":0,"Δ":0,"I":0,"R":0,"T":0,"M":0}));
+    let reply = out
+        .get("reply")
+        .and_then(|v| v.as_str())
+        .unwrap_or("⟂ no reply");
+    let intent = out
+        .get("intent")
+        .cloned()
+        .unwrap_or(json!({"goal":"chat","constraints":[],"evidence":[]}));
+    let patch = out.get("patch").cloned().unwrap_or(Value::Null);
+    let explanation = out
+        .get("explanation")
+        .cloned()
+        .unwrap_or(json!({"assumptions":[],"evidence":[],"limits":[]}));
 
     Ok(json!({
       "intent": intent,

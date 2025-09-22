@@ -1,12 +1,12 @@
 pub mod flywheel;
-pub mod monorepo;
-pub mod ui;
-pub mod telemetry;
 pub mod kpi;
+pub mod monorepo;
+pub mod telemetry;
+pub mod ui;
 
-use crate::engine::types::{Manifest, Bits};
-use serde::{Serialize, Deserialize};
+use crate::engine::types::{Bits, Manifest};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, ToSchema)]
